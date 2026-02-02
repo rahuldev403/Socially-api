@@ -147,17 +147,17 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Session Configuration - Must match frontend origin exactly
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True  # Required when SameSite=None
 SESSION_COOKIE_DOMAIN = None  # Don't set domain to allow 127.0.0.1
 SESSION_COOKIE_PATH = '/'
 SESSION_COOKIE_NAME = 'sessionid'
 
 # CSRF Configuration
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True  # Required when SameSite=None
 CSRF_COOKIE_DOMAIN = None
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() 
