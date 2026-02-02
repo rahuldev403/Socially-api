@@ -1,0 +1,42 @@
+services:
+  # Backend API
+  - type: web
+    name: socially-api
+    runtime: python
+    buildCommand: |
+      cd server
+      pip install -r requirements.txt
+      python manage.py collectstatic --no-input
+      python manage.py migrate --no-input
+    startCommand: cd server && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: 5432
+
+  # PostgreSQL Database
+  - type: pserv
+    name: socially-db
+    runtime: postgres
+    plan: starter
+    ipAllowList: []
+
+databases:
+  - name: socially-db
+    databaseName: socially
+    user: socially
