@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Post, Like
 from .serializers import PostSerializer
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from core.authentication import CsrfExemptSessionAuthentication
 from .models import Comment
 from .serializers import CommentSerializer
@@ -46,8 +46,23 @@ def list_posts(request):
 @api_view(["POST"])
 @authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def like_post(request, post_id):
     try:
+        # Use select_for_update to prevent race conditions
+        # Check if like already exists with row-level locking
+        existing_like = Like.objects.select_for_update().filter(
+            user=request.user,
+            target_type="POST",
+            target_id=post_id
+        ).first()
+        
+        if existing_like:
+            return Response(
+                {"error": "You have already liked this post"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         Like.objects.create(
             user=request.user,
             target_type="POST",
@@ -55,8 +70,50 @@ def like_post(request, post_id):
         )
         return Response({"liked": True})
     except IntegrityError:
+        # Fallback in case constraint is hit
         return Response(
             {"error": "You have already liked this post"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def like_comment(request, comment_id):
+    try:
+        # Verify comment exists
+        try:
+            Comment.objects.get(id=comment_id)
+        except Comment.DoesNotExist:
+            return Response(
+                {"error": "Comment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Use select_for_update to prevent race conditions
+        existing_like = Like.objects.select_for_update().filter(
+            user=request.user,
+            target_type="COMMENT",
+            target_id=comment_id
+        ).first()
+        
+        if existing_like:
+            return Response(
+                {"error": "You have already liked this comment"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        Like.objects.create(
+            user=request.user,
+            target_type="COMMENT",
+            target_id=comment_id
+        )
+        return Response({"liked": True})
+    except IntegrityError:
+        # Fallback in case constraint is hit
+        return Response(
+            {"error": "You have already liked this comment"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -76,7 +133,13 @@ def create_comment(request):
 
     parent = None
     if parent_id:
-        parent = Comment.objects.get(id=parent_id)
+        try:
+            parent = Comment.objects.get(id=parent_id)
+        except Comment.DoesNotExist:
+            return Response(
+                {"error": "Parent comment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     comment = Comment.objects.create(
         author=request.user,
@@ -96,7 +159,7 @@ def get_comments(request, post_id):
         post_id=post_id
     ).select_related("author").order_by("created_at")
 
-    serializer = CommentSerializer(comments, many=True)
+    serializer = CommentSerializer(comments, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(["DELETE"])

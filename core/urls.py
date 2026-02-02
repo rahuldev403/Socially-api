@@ -1,7 +1,7 @@
 from django.urls import path
 from .views_auth import login_view, logout_view, me_view, signup_view
 from .views import create_post, list_posts
-from .views import like_post
+from .views import like_post, like_comment
 from .views import create_comment, get_comments, delete_comment
 from .views import leaderboard
 
@@ -19,6 +19,7 @@ posts_urlpatterns = [
     path("posts/<int:post_id>/like/", like_post),
     path("comments/", create_comment),
     path("comments/<int:comment_id>/", delete_comment),
+    path("comments/<int:comment_id>/like/", like_comment),
     path("posts/<int:post_id>/comments/", get_comments),
     path("leaderboard/", leaderboard),
 ]
