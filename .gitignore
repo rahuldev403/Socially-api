@@ -24,6 +24,8 @@ venv/
 ENV/
 env/
 .venv
+staticfiles/
+*.pyc
 
 # Environment variables
 .env

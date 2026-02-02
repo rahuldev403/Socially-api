@@ -2,7 +2,7 @@
 # exit on error
 set -o errexit
 
-cd server
 pip install -r requirements.txt
+mkdir -p staticfiles
 python manage.py collectstatic --no-input
 python manage.py migrate --no-input
